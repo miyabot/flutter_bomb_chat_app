@@ -1,0 +1,30 @@
+■ main.dart
+
+変化をリアルタイムで監視して、状態が変わるたびに自動で画面を更新する仕組みがStreamBuilderです。
+
+// Firebaseのログイン状態の変化を監視するStreamを渡す
+// ログイン・ログアウトのたびにbuilderが再実行される
+stream: FirebaseAuth.instance.authStateChanges(),
+
+snapshot.connectionState  // 通信の状態（待機中・完了など）
+snapshot.hasData          // データが存在するか
+snapshot.data             // 実際のデータ（今回はUserオブジェクト）
+snapshot.hasError         // エラーが起きているか
+snapshot.error            // エラーの内容
+
+//Firestoreに問い合わせ中（データがまだ届いていない）
+if (snapshot.connectionState == ConnectionState.waiting)
+
+Userクラスの中身
+Firebaseにログインしているユーザーの情報が入っています。
+dartuser.uid           // ユーザーの一意なID（最重要）
+user.email         // メールアドレス
+user.displayName   // 表示名
+user.photoURL      // プロフィール画像のURL
+
+//riverpod
+notifierをつけるとき→メソッドの呼び出し
+つけないとき→値そのものの取得
+
+
+
