@@ -15,17 +15,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   // メッセージを送信する
   Future<void> _sendMessage() async {
+    //trimで前後の空白削除
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    //現在ログインしているユーザー情報を取得
     final user = ref.read(authProvider).currentUser;
     if (user == null) return;
 
+    // Firestoreのmessagesコレクションに1件追加する
     await ref.read(firestoreProvider).collection('messages').add({
       'text': text,
       'uid': user.uid,
       'email': user.email,
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),  // 送信日時
     });
 
     _messageController.clear();
@@ -33,6 +36,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+    final messageState = ref.watch(messagesProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('チャット'),
@@ -47,20 +53,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           // メッセージ一覧
           Expanded(
-            child: ref.watch(messagesProvider).when(
+            //watchしてるやつが更新されるたびに処理分岐が発生
+            child: messageState.when(
+              //snapshotにはFirestoreから届いたデータ全体が入っている
               data: (snapshot) {
+                //docsにはメッセージ1件1件が入っている
                 final docs = snapshot.docs;
 
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
+                    //各メッセージのデータを取り出す（Map形式に変換）
                     final data = docs[index].data() as Map<String, dynamic>;
+
+                    //ログイン中のユーザーと送信者が同じか判定
                     final isMe = data['uid'] == ref.read(authProvider).currentUser?.uid;
 
+                    //画面の右側か左側か振り分け
                     return Align(
                       alignment:
                           isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
+                        
                         margin: const EdgeInsets.symmetric(
                           vertical: 4,
                           horizontal: 12,
@@ -108,6 +122,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
+                //TextFieldは長さ無限なのでExpandedで囲む
                 Expanded(
                   child: TextField(
                     controller: _messageController,

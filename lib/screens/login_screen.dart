@@ -73,7 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               decoration: const InputDecoration(labelText: 'メールアドレス'),
               keyboardType: TextInputType.emailAddress,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 16), 
 
             TextField(
               controller: _passwordController,
