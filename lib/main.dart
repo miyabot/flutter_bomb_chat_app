@@ -1,3 +1,4 @@
+import 'package:bomb_chat/screens/room_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,7 +28,7 @@ class MyApp extends ConsumerWidget {
       home: authState.when(
         data: (user) {
           if (user != null) {
-            return const ChatScreen(); // ログイン済み
+            return const RoomListScreen(); // ログイン済み
           }
           return const LoginScreen(); // 未ログイン
         },

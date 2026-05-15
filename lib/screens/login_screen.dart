@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,6 +50,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+      //新規登録時にfirestoreにもユーザー情報追加
+      await ref.read(firestoreProvider).collection('users').add({
+        'email':_emailController.text.trim(),
+        'createdAt':FieldValue.serverTimestamp(),
+        'uid':ref.read(authProvider).currentUser!.uid,
+      });
     } catch (e) {
       // 登録失敗時はSnackBarでエラー内容を表示
       ScaffoldMessenger.of(

@@ -4,13 +4,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key});
+  final String roomId;
+  const ChatScreen({super.key, required this.roomId});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
+  
   final _messageController = TextEditingController();
 
   // メッセージを送信する
@@ -24,7 +26,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (user == null) return;
 
     // Firestoreのmessagesコレクションに1件追加する
-    await ref.read(firestoreProvider).collection('messages').add({
+    await ref.read(firestoreProvider).collection('rooms').doc(widget.roomId).collection('messages').add({
       'text': text,
       'uid': user.uid,
       'email': user.email,
@@ -37,7 +39,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
 
-    final messageState = ref.watch(messagesProvider);
+    final messageState = ref.watch(messagesProvider(widget.roomId));
 
     return Scaffold(
       appBar: AppBar(
@@ -45,7 +47,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authProvider).signOut(),
+            onPressed: (){
+              ref.read(authProvider).signOut();
+            // スタックを全部消してLoginScreenに戻る
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            }
+            
           ),
         ],
       ),

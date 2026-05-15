@@ -21,10 +21,28 @@ final authStateProvider = StreamProvider<User?>((ref) {
 });
 
 // チャットメッセージを監視するStreamProvider
-final messagesProvider = StreamProvider<QuerySnapshot>((ref) {
+final messagesProvider = StreamProvider.family<QuerySnapshot,String>((ref,roomId) {
   final firestore = ref.watch(firestoreProvider);
   return firestore
+      .collection('rooms')
+      .doc(roomId)
       .collection('messages')
       .orderBy('createdAt', descending: false)
       .snapshots();
 });
+
+//参加している部屋を監視するStreamProvider
+final roomProvider = StreamProvider<QuerySnapshot>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  return firestore
+  // Firestoreのroomsコレクションを指定
+  .collection('rooms')
+  //membersという配列の中に自分のuidが含まれているドキュメントだけを取得する
+  .where('members',arrayContains: ref.watch(authProvider).currentUser!.uid)
+  // 作成日時順に並び替え
+  .orderBy('createdAt',descending: false)
+  // リアルタイムで監視（変更があったときに即座に反映される）
+  .snapshots();
+});
+
+
