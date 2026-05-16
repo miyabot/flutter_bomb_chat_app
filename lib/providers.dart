@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -32,17 +35,58 @@ final messagesProvider = StreamProvider.family<QuerySnapshot,String>((ref,roomId
 });
 
 //参加している部屋を監視するStreamProvider
-final roomProvider = StreamProvider<QuerySnapshot>((ref) {
+final roomsProvider = StreamProvider<QuerySnapshot>((ref) {
   final firestore = ref.watch(firestoreProvider);
+
+  //authStateProviderのvalue（ログイン中のユーザー情報）を取得
+  final user = ref.watch(authStateProvider).value;
+  final uid = user?.uid;
+  
+  // uidが正しく取れているか確認
+  //debugPrint('現在のuid: $uid');
+  
   return firestore
-  // Firestoreのroomsコレクションを指定
-  .collection('rooms')
-  //membersという配列の中に自分のuidが含まれているドキュメントだけを取得する
-  .where('members',arrayContains: ref.watch(authProvider).currentUser!.uid)
-  // 作成日時順に並び替え
-  .orderBy('createdAt',descending: false)
-  // リアルタイムで監視（変更があったときに即座に反映される）
-  .snapshots();
+      .collection('rooms')
+      .where('members', arrayContains: uid)
+      .orderBy('createdAt', descending: false)
+      .snapshots();
 });
+
+// 認証操作をまとめるNotifier
+class AuthNotifier extends AsyncNotifier<void> {
+  
+  // 新規登録
+  Future<void> register(String email, String password) async {
+    //メールアドレスとパスワードで新規登録
+    final credential = await ref.read(authProvider)
+        .createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+    //画面が切り替わって破棄されないように直接instanceを指定
+    await ref.read(firestoreProvider).collection('users').add({
+      'email': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'userId': _generateUserId(),
+      'uid': credential.user!.uid,
+    });
+  }
+
+  // ランダムID生成
+  String _generateUserId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    final random = Random();
+    return List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
+  }
+
+  @override
+  Future<void> build() async {}
+}
+
+// Providerの定義
+final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, void>(
+  AuthNotifier.new,
+);
 
 

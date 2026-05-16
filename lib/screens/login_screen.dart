@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:bomb_chat/screens/register_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -35,32 +38,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('ログイン失敗：$e')));
-    }
-
-    setState(() => _isLoading = false);
-  }
-
-  // Firebase Authenticationによる新規アカウント登録処理
-  Future<void> _register() async {
-    setState(() => _isLoading = true);
-
-    try {
-      //メールアドレスとパスワードで新規登録
-      await ref.read(authProvider).createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      //新規登録時にfirestoreにもユーザー情報追加
-      await ref.read(firestoreProvider).collection('users').add({
-        'email':_emailController.text.trim(),
-        'createdAt':FieldValue.serverTimestamp(),
-        'uid':ref.read(authProvider).currentUser!.uid,
-      });
-    } catch (e) {
-      // 登録失敗時はSnackBarでエラー内容を表示
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('登録失敗：$e')));
     }
 
     setState(() => _isLoading = false);
@@ -105,9 +82,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: _register,
-                  child: const Text('新規登録'),
+                child:TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                    );
+                  },
+                  child: const Text('アカウントをお持ちでない方はこちら'),
                 ),
               ),
             ],

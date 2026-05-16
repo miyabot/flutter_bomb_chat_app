@@ -1,3 +1,4 @@
+import 'package:bomb_chat/screens/invite_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -45,6 +46,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppBar(
         title: const Text('チャット'),
         actions: [
+          IconButton(
+            onPressed: (){
+              Navigator.push(context, MaterialPageRoute(builder: (context)=>InviteScreen(roomId:widget.roomId)));
+            }, 
+            icon: Icon(Icons.add)
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: (){

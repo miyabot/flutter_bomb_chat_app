@@ -15,7 +15,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomList = ref.watch(roomProvider);
+    final roomList = ref.watch(roomsProvider);
     return roomList.when(
       data:(snapshot){
         final docs = snapshot.docs;
