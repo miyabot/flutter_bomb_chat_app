@@ -45,7 +45,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
 
                 if(result.docs.isNotEmpty){
                   // Firestoreのusersから本物のuidを取り出す
-                  final data = result.docs[0].data() as Map<String, dynamic>;
+                  final data = result.docs[0].data();
                   final targetUid = data['uid']; // ← これが本物のuid
 
                   await ref.read(firestoreProvider)
