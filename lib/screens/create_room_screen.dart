@@ -25,6 +25,14 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             'createdAt': FieldValue.serverTimestamp(),
             'createdBy': ref.read(authProvider).currentUser!.uid,
             'members': [ref.read(authProvider).currentUser!.uid],
+            'gameState': {
+              'status':     'waiting',
+              'targetUser': '',    // NPCが指名した人のuid
+              'question':   '',    // NPCが出したお題
+              'votes':      {},    // 投票結果
+              'fuseCount':  0,     // 導火線に火がついた回数
+              'maxFuse':    5,     // 爆発するまでの回数
+            },
           });
           // 作成後に前の画面に戻る
           Navigator.pop(context);

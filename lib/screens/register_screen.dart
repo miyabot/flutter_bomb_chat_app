@@ -65,7 +65,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               onPressed: (){
                 _register();
                 // スタックを全部消してRoomListScreenに切り替わるのを待つ
-                if (context.mounted) {
+                if (context.mounted) { //mountedでWidgetが画面上に存在するかチェック
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 }
               }, 

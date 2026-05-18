@@ -46,9 +46,15 @@ final roomsProvider = StreamProvider<QuerySnapshot>((ref) {
   
   return firestore
       .collection('rooms')
-      .where('members', arrayContains: uid)
-      .orderBy('createdAt', descending: false)
-      .snapshots();
+      .where('members', arrayContains: uid) //配列内にuidが存在するものだけを抽出
+      .orderBy('createdAt', descending: false) //作成日時の降順で表示
+      .snapshots(); //変更があるたびに取得し直す
+});
+
+//チャットルームの状態を監視するStreamProvider
+final currentRoomStateProvider = StreamProvider.family<DocumentSnapshot,String>((ref,roomId){
+  final fireStore = ref.watch(firestoreProvider);
+  return fireStore.collection('rooms').doc(roomId).snapshots();
 });
 
 // 認証操作をまとめるNotifier
@@ -86,6 +92,61 @@ class AuthNotifier extends AsyncNotifier<void> {
 // Providerの定義
 final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, void>(
   AuthNotifier.new,
+);
+
+//ゲームに関する処理をまとめたNotifier
+class GameNotifier extends Notifier<void> {
+
+  //ゲーム開始処理
+  Future<void> startGame(String roomId,List<String>members)async{
+    final random = Random();
+
+    //membersからランダムに1人選出
+    final targetUser = random.nextInt(members.length);
+
+    //プリセットからお題をランダム選出
+    final questions = [
+      '好きな食べ物は？',
+      '最近嬉しかったことは？',
+      '無人島に持っていくものは？',
+      '尊敬する人は？',
+      '今一番欲しいものは？',
+    ];
+
+    final selectedQuestion = questions[random.nextInt(questions.length)];
+
+    //FirestoreのgameStateを更新
+    await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+      'gameState':{
+        'status' : 'questioning',
+        'targetUser': members[targetUser],
+        'question': selectedQuestion,
+        'fuseCount': 0,
+        'maxFuse': 5,
+      }
+    });
+  }
+
+  Future<void> endGame(String roomId,List<String>members)async{
+    await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+      'gameState':{
+        'status' : 'waiting',
+        'targetUser': '',
+        'question': '',
+        'fuseCount': 0,
+        'maxFuse': 0,
+      }
+    });
+  }
+
+  @override
+   build() {
+    
+  }
+}
+
+final gameNotifireProvider = NotifierProvider<GameNotifier,void>(
+  GameNotifier.new,
 );
 
 

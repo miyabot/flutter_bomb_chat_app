@@ -40,121 +40,174 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
 
     final messageState = ref.watch(messagesProvider(widget.roomId));
+    final roomState = ref.watch(currentRoomStateProvider(widget.roomId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('チャット'),
-        actions: [
-          IconButton(
-            onPressed: (){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>InviteScreen(roomId:widget.roomId)));
-            }, 
-            icon: Icon(Icons.add)
+    return roomState.when(
+      data: (snapshot){
+        final data = snapshot.data() as Map<String, dynamic>;
+        final gameState = data['gameState'] as Map<String, dynamic>;
+        final status = gameState['status'] as String;
+        final members = List<String>.from(data['members']);
+
+        final targetUser = gameState['targetUser'] as String;
+        final question = gameState['question'] as String;
+        final currentUid = ref.read(authProvider).currentUser?.uid;
+
+        final isTarget = targetUser == currentUid;
+
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('チャット'),
+            actions: [
+              IconButton(
+                onPressed: (){
+                  Navigator.push(context, MaterialPageRoute(builder: (context)=>InviteScreen(roomId:widget.roomId)));
+                }, 
+                icon: Icon(Icons.add)
+              ),
+              (status == 'waiting') ? 
+              IconButton(
+                icon: const Icon(Icons.sports_esports), // ゲームアイコン
+                onPressed: () {
+                  // ゲーム開始処理
+                  ref.read(gameNotifireProvider.notifier).startGame(
+                    widget.roomId,
+                    members,
+                  );
+                },
+              ):
+              IconButton(
+                icon: const Icon(Icons.pause),//ストップ
+                onPressed: () {
+                  // ゲーム開始処理
+                  ref.read(gameNotifireProvider.notifier).endGame(
+                    widget.roomId,
+                    members,
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: (){
+                  ref.read(authProvider).signOut();
+                // スタックを全部消してLoginScreenに戻る
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
+                
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: (){
-              ref.read(authProvider).signOut();
-            // スタックを全部消してLoginScreenに戻る
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            }
-            
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // メッセージ一覧
-          Expanded(
-            //watchしてるやつが更新されるたびに処理分岐が発生
-            child: messageState.when(
-              //snapshotにはFirestoreから届いたデータ全体が入っている
-              data: (snapshot) {
-                //docsにはメッセージ1件1件が入っている
-                final docs = snapshot.docs;
+          body: Column(
+            children: [
+              if(status == 'questioning')
+              Container(
+                padding: EdgeInsets.all(16),
+                color: Colors.yellow[100],
+                child:isTarget ? 
+                  Column(
+                    children: [
+                      Text('お題：$question')
+                    ],
+                  ):
+                  Text('回答を待っています')
+              ),
+              // メッセージ一覧
+              Expanded(
+                //watchしてるやつが更新されるたびに処理分岐が発生
+                child: messageState.when(
+                  //snapshotにはFirestoreから届いたデータ全体が入っている
+                  data: (snapshot) {
+                    //docsにはメッセージ1件1件が入っている
+                    final docs = snapshot.docs;
 
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    //各メッセージのデータを取り出す（Map形式に変換）
-                    final data = docs[index].data() as Map<String, dynamic>;
+                    return ListView.builder(
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        //各メッセージのデータを取り出す（Map形式に変換）
+                        final data = docs[index].data() as Map<String, dynamic>;
 
-                    //ログイン中のユーザーと送信者が同じか判定
-                    final isMe = data['uid'] == ref.read(authProvider).currentUser?.uid;
+                        //ログイン中のユーザーと送信者が同じか判定
+                        final isMe = data['uid'] == ref.read(authProvider).currentUser?.uid;
 
-                    //画面の右側か左側か振り分け
-                    return Align(
-                      alignment:
-                          isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        
-                        margin: const EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 12,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isMe ? Colors.blue : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: isMe
-                              ? CrossAxisAlignment.end
-                              : CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              data['email'] ?? '',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isMe ? Colors.white70 : Colors.black54,
-                              ),
+                        //画面の右側か左側か振り分け
+                        return Align(
+                          alignment:
+                              isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            
+                            margin: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 12,
                             ),
-                            Text(
-                              data['text'] ?? '',
-                              style: TextStyle(
-                                color: isMe ? Colors.white : Colors.black,
-                              ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 14,
                             ),
-                          ],
-                        ),
-                      ),
+                            decoration: BoxDecoration(
+                              color: isMe ? Colors.blue : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: isMe
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  data['email'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isMe ? Colors.white70 : Colors.black54,
+                                  ),
+                                ),
+                                Text(
+                                  data['text'] ?? '',
+                                  style: TextStyle(
+                                    color: isMe ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('エラー: $error')),
-            ),
-          ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(child: Text('エラー: $error')),
+                ),
+              ),
 
-          // 入力欄
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                //TextFieldは長さ無限なのでExpandedで囲む
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'メッセージを入力',
-                      border: OutlineInputBorder(),
+              // 入力欄
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    //TextFieldは長さ無限なのでExpandedで囲む
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: const InputDecoration(
+                          hintText: 'メッセージを入力',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: _sendMessage,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('エラー: $error')),
     );
+    
   }
 }

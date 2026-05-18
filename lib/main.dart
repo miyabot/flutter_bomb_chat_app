@@ -25,6 +25,7 @@ class MyApp extends ConsumerWidget {
       title: 'Bomb Chat',
       //監視対象の状態毎に処理を分岐
       home: authState.when(
+        //data:ログインが確定した時の処理
         data: (user) {
           if (user != null) {
             return const RoomListScreen(); // ログイン済み
