@@ -71,7 +71,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 icon: const Icon(Icons.sports_esports), // ゲームアイコン
                 onPressed: () {
                   // ゲーム開始処理
-                  ref.read(gameNotifireProvider.notifier).startGame(
+                  ref.read(gameNotifierProvider.notifier).startGame(
                     widget.roomId,
                     members,
                   );
@@ -81,7 +81,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 icon: const Icon(Icons.pause),//ストップ
                 onPressed: () {
                   // ゲーム開始処理
-                  ref.read(gameNotifireProvider.notifier).endGame(
+                  ref.read(gameNotifierProvider.notifier).endGame(
                     widget.roomId,
                     members,
                   );
@@ -107,11 +107,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 child:isTarget ? 
                   Column(
                     children: [
-                      Text('お題：$question')
+                      Text('お題：$question'),
+                      TextField(
+                        controller: _messageController,
+                        decoration: InputDecoration(label: Text('回答を入力')),
+                      ),
+                      ElevatedButton(
+                        onPressed: (){
+                          _sendMessage();
+                          _messageController.clear();
+                          ref.read(gameNotifierProvider.notifier).startVoting(widget.roomId);
+                        },
+                        child: Text('回答する'),
+                      )
                     ],
                   ):
                   Text('回答を待っています')
               ),
+              if(status == 'waiting' || status == 'questioning')
               // メッセージ一覧
               Expanded(
                 //watchしてるやつが更新されるたびに処理分岐が発生
@@ -178,12 +191,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               ),
 
+              if(status == 'voting')
+              Container(
+                padding:const EdgeInsets.all(16),
+                color: Colors.blue[100],
+                child:isTarget ? 
+                Center(
+                  child: const Text('投票を待っています')):
+                Column(
+                  children: [
+                    Text('回答はどうでしたか？'),
+                    Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed:() async{
+                            await ref.read(gameNotifierProvider.notifier).vote(widget.roomId, currentUid!, true);
+                            await ref.read(gameNotifierProvider.notifier).checkVote(widget.roomId, members);
+                          }, 
+                          child:const Text('〇')
+                        ),
+                        ElevatedButton(
+                          onPressed:() async{
+                            await ref.read(gameNotifierProvider.notifier).vote(widget.roomId, currentUid!, false);
+                            await ref.read(gameNotifierProvider.notifier).checkVote(widget.roomId, members);
+                          }, 
+                          child:const Text('×')
+                        ),
+                      ],
+                    )
+                  ],
+                )
+              ),
+
+              if(status == 'waiting')
               // 入力欄
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Row(
                   children: [
-                    //TextFieldは長さ無限なのでExpandedで囲む
+                  //TextFieldは長さ無限なのでExpandedで囲む
                     Expanded(
                       child: TextField(
                         controller: _messageController,

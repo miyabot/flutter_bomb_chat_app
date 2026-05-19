@@ -117,14 +117,80 @@ class GameNotifier extends Notifier<void> {
 
     //FirestoreのgameStateを更新
     await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+      //マップ記法：gameStateの中身が全部置き換わる
       'gameState':{
         'status' : 'questioning',
         'targetUser': members[targetUser],
         'question': selectedQuestion,
         'fuseCount': 0,
         'maxFuse': 5,
+        'votes':{}
       }
     });
+  }
+
+  Future<void> startVoting(String roomId)async{
+    await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+      //ドット記法：指定したフォール度だけ更新・他は残る
+      'gameState.status' : 'voting',
+    });
+  }
+
+  //投票処理
+  Future<void> vote(String roomId, String uid, bool isCorrect) async {
+  await ref.read(firestoreProvider)
+      .collection('rooms')
+      .doc(roomId)
+      .update({
+        'gameState.votes.$uid': isCorrect,
+      });
+  }
+
+  //誰に投票するかチェック
+  Future<void> checkVote(String roomId,List<String> members)async{
+    //Firestoreから最新のgameStateを取得
+    final doc = await ref.read(firestoreProvider).collection('rooms').doc(roomId).get();
+    final data = doc.data() as Map<String,dynamic>;
+    final gameState = data['gameState'] as Map<String,dynamic>;
+
+    final votes = gameState['votes'] as Map<String,dynamic>;
+    final fuseCount = gameState['fuseCount'] as int;
+    final maxFuse = gameState['maxFuse'] as int;
+    final targetUser = gameState['targetUser'] as String;
+
+    //投票できる人(whereで条件に合うものだけ取り出す)
+    final voters = members.where((uid)=>uid != targetUser).toList();
+    
+    //まだ全員投票していない
+    if(votes.length < voters.length) return;
+
+    final missCount = votes.values.where((v)=>v==false).length;
+    final newFuseCount = fuseCount + (missCount > 0 ? 1 : 0);
+
+    if(newFuseCount >= maxFuse){
+      //爆発
+      await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+        'gameState.status' : 'result',
+        'gameState.fuseCount' : newFuseCount,
+      });
+    }
+    else{
+      // 次のターン処理に追加
+      final random = Random();
+      final newTargetUser = members[random.nextInt(members.length)];
+      final questions = ['好きな食べ物は？', '最近嬉しかったことは？','無人島に持っていくものは？','尊敬する人は？','今一番欲しいものは？',];
+      final newQuestion = questions[random.nextInt(questions.length)];
+
+      //次のターン
+      await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+        'gameState.status' : 'questioning',
+        'gameState.fuseCount' : newFuseCount,
+        'gameState.votes' : {},
+        'gameState.targetUser': newTargetUser,  // 新しい出題者
+        'gameState.question':   newQuestion,    // 新しいお題
+      });
+
+    }
   }
 
   Future<void> endGame(String roomId,List<String>members)async{
@@ -134,7 +200,8 @@ class GameNotifier extends Notifier<void> {
         'targetUser': '',
         'question': '',
         'fuseCount': 0,
-        'maxFuse': 0,
+        'maxFuse': 5,
+        'votes':{}
       }
     });
   }
@@ -145,7 +212,7 @@ class GameNotifier extends Notifier<void> {
   }
 }
 
-final gameNotifireProvider = NotifierProvider<GameNotifier,void>(
+final gameNotifierProvider = NotifierProvider<GameNotifier,void>(
   GameNotifier.new,
 );
 
