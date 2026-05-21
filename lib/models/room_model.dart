@@ -23,6 +23,7 @@ class RoomModel {
   /// このルームに関連付けられたゲームの現在の状態。
   final GameState gameState;
 
+
   const RoomModel({
     required this.id,
     required this.name,
@@ -90,6 +91,9 @@ class GameState {
   /// 結果画面を閉じたメンバーの UID リスト。
   final List<String> closedMembers;
 
+  /// ゲームに参加しているメンバーの UID リスト
+  final List<String> activeMembers;
+
   const GameState({
     required this.status,
     required this.targetUser,
@@ -98,6 +102,7 @@ class GameState {
     required this.fuseCount,
     required this.maxFuse,
     required this.closedMembers,
+    required this.activeMembers
   });
 
   /// Firestore から取得した Map から [GameState] を生成するファクトリコンストラクタ。
@@ -108,6 +113,9 @@ class GameState {
     final closedRaw = map['closedMembers'] as List<dynamic>? ?? [];
     final closedList = closedRaw.map((e) => e.toString()).toList();
 
+    final activeRow = map['activeMembers'] as List<dynamic>? ?? [];
+    final activeList = activeRow.map((e)=>e.toString()).toList();
+
     return GameState(
       status: map['status'] as String? ?? 'waiting',
       targetUser: map['targetUser'] as String? ?? '',
@@ -116,6 +124,7 @@ class GameState {
       fuseCount: map['fuseCount'] as int? ?? 0,
       maxFuse: map['maxFuse'] as int? ?? 5,
       closedMembers: closedList,
+      activeMembers:activeList
     );
   }
 
@@ -129,6 +138,7 @@ class GameState {
       'fuseCount': fuseCount,
       'maxFuse': maxFuse,
       'closedMembers': closedMembers,
+      'activeMembers':activeMembers
     };
   }
 }

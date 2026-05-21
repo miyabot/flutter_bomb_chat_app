@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:bomb_chat/models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +14,20 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore
 
 final authStateProvider = StreamProvider<User?>((ref) {
   return ref.watch(authProvider).authStateChanges();
+});
+
+final currentUserProvider = StreamProvider<UserModel?>((ref) {
+  final uid = ref.watch(authStateProvider).value?.uid;
+  if (uid == null) return Stream.value(null);
+
+  return ref.watch(firestoreProvider)
+      .collection('users')
+      .where('uid', isEqualTo: uid)
+      .snapshots()
+      .map((snapshot) {
+        if (snapshot.docs.isEmpty) return null;
+        return UserModel.fromDocument(snapshot.docs.first);
+      });
 });
 
 final messagesProvider = StreamProvider.family<List<MessageModel>, String>((ref, roomId) {
@@ -61,6 +76,7 @@ class AuthNotifier extends AsyncNotifier<void> {
         'createdAt': FieldValue.serverTimestamp(),
         'userId': _generateUserId(),
         'uid': credential.user!.uid,
+        'name': '',
       });
 
       state = const AsyncValue.data(null);
@@ -75,6 +91,18 @@ class AuthNotifier extends AsyncNotifier<void> {
     final random = Random();
     return List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
   }
+
+  Future<void> saveName(String name)async{
+    final uid = ref.read(authProvider).currentUser?.uid;
+    if(uid == null)return;
+
+    final query = await ref.read(firestoreProvider).collection('users').where('uid',isEqualTo: uid).get();
+    if (query.docs.isEmpty) return;
+    await ref.read(firestoreProvider)
+      .collection('users')
+      .doc(query.docs.first.id)
+      .update({'name': name});
+    }
 
   @override
   Future<void> build() async {}
@@ -101,6 +129,7 @@ class RoomNotifier extends Notifier<void> {
         'fuseCount': 0,
         'maxFuse': 5,
         'closedMembers': [],
+        'activeMembers': []
       },
     });
   }
@@ -134,13 +163,23 @@ final roomNotifierProvider = NotifierProvider<RoomNotifier, void>(RoomNotifier.n
 /// ゲーム内のお題割り当て・投票集計・ターン遷移・勝敗判定などのゲーム進行ロジックを管理するクラス
 class GameNotifier extends Notifier<void> {
   
+  //チャット画面を開いた時
   Future<void> joinGame(String roomId,String uid)async{
-    
+    await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+      'gameState.activeMembers': FieldValue.arrayUnion([uid]),
+    });
   }
 
-  Future<void> startGame(String roomId, List<String> members) async {
+  //チャット画面を閉じた時
+  Future<void> leaveGame(String roomId,String uid)async{
+    await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+      'gameState.activeMembers': FieldValue.arrayRemove([uid]),
+    });
+  }
+
+  Future<void> startGame(String roomId, List<String> activeMembers) async {
     final random = Random();
-    final targetUser = members[random.nextInt(members.length)];
+    final targetUser = activeMembers[random.nextInt(activeMembers.length)];
     final questions = [
       '好きな食べ物は？',
       '最近嬉しかったことは？',
@@ -151,15 +190,13 @@ class GameNotifier extends Notifier<void> {
     final selectedQuestion = questions[random.nextInt(questions.length)];
 
     await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
-      'gameState': {
-        'status': 'questioning',
-        'targetUser': targetUser,
-        'question': selectedQuestion,
-        'fuseCount': 0,
-        'maxFuse': 5,
-        'votes': {},
-        'closedMembers': [],
-      }
+      'gameState.status': 'questioning',
+      'gameState.targetUser': targetUser,
+      'gameState.question': selectedQuestion,
+      'gameState.fuseCount': 0,
+      'gameState.maxFuse': 5,
+      'gameState.votes': {},
+      'gameState.closedMembers': [],
     });
   }
 
@@ -179,7 +216,7 @@ class GameNotifier extends Notifier<void> {
   }
 
   /// 投票の完了を検知し、爆発または次のターンへのゲーム状態遷移を判定する
-  Future<void> checkVote(String roomId, List<String> members) async {
+  Future<void> checkVote(String roomId, List<String> activeMembers) async {
     final doc = await ref.read(firestoreProvider).collection('rooms').doc(roomId).get();
     final data = doc.data();
     if (data == null) return;
@@ -191,7 +228,7 @@ class GameNotifier extends Notifier<void> {
     final targetUser = gameState['targetUser'] as String? ?? '';
 
     // 回答者以外のメンバーの投票が完了したかを判定
-    final voters = members.where((uid) => uid != targetUser).toList();
+    final voters = activeMembers.where((uid) => uid != targetUser).toList();
     if (votes.length < voters.length) return;
 
     final missCount = votes.values.where((v) => v == false).length;
@@ -207,7 +244,7 @@ class GameNotifier extends Notifier<void> {
     } else {
       // 次の回答者を抽選し、新しいお題を設定してターンを切り替える
       final random = Random();
-      final newTargetUser = members[random.nextInt(members.length)];
+      final newTargetUser = activeMembers[random.nextInt(activeMembers.length)];
       final questions = [
         '好きな食べ物は？',
         '最近嬉しかったことは？',
@@ -229,15 +266,13 @@ class GameNotifier extends Notifier<void> {
 
   Future<void> endGame(String roomId, List<String> members) async {
     await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
-      'gameState': {
-        'status': 'waiting',
-        'targetUser': '',
-        'question': '',
-        'fuseCount': 0,
-        'maxFuse': 5,
-        'votes': {},
-        'closedMembers': [],
-      }
+      'gameState.status': 'waiting',
+      'gameState.targetUser': '',
+      'gameState.question': '',
+      'gameState.fuseCount': 0,
+      'gameState.maxFuse': 5,
+      'gameState.votes': {},
+      'gameState.closedMembers': [],
     });
   }
 

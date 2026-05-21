@@ -17,11 +17,15 @@ class UserModel {
   /// Firestore にユーザーアカウントドキュメントが作成された日時。
   final DateTime? createdAt;
 
+  /// ユーザーの名前
+  final String name;
+
   const UserModel({
     required this.uid,
     required this.email,
     required this.userId,
     this.createdAt,
+    required this.name
   });
 
   /// Firestore の [DocumentSnapshot] から [UserModel] を生成するファクトリコンストラクタ。
@@ -41,6 +45,7 @@ class UserModel {
       email: data['email'] as String? ?? '',
       userId: data['userId'] as String? ?? '',
       createdAt: timestamp?.toDate(),
+      name:data['name'] as String? ?? ''
     );
   }
 
@@ -51,6 +56,7 @@ class UserModel {
       'email': email,
       'userId': userId,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'name': name,
     };
   }
 }

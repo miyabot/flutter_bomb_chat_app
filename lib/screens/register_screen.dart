@@ -1,3 +1,4 @@
+import 'package:bomb_chat/screens/profile_setup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,7 +36,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
 
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+          builder: (context) => const ProfileSetupScreen(),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

@@ -1,6 +1,8 @@
+import 'package:bomb_chat/screens/profile_setup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/src/framework.dart';
 
 import 'firebase_options.dart';
 import 'providers.dart';
@@ -21,6 +23,7 @@ void main() async {
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
@@ -29,7 +32,24 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       title: 'Bomb Chat',
       home: authState.when(
-        data: (user) => user != null ? const RoomListScreen() : const LoginScreen(),
+        data: (user){
+          if(user == null){
+            return const LoginScreen();
+          } 
+          // nameが設定されているか確認
+          return ref.watch(currentUserProvider).when(
+            data: (userModel) {
+              if (userModel == null || userModel.name.isEmpty) {
+                return const ProfileSetupScreen(); // 名前未設定
+              }
+              return const RoomListScreen(); // 設定済み
+            },
+            loading: () => const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, s) => const RoomListScreen(),
+          );
+        },
         loading: () => const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),

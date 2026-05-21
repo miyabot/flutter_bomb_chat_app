@@ -22,8 +22,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = ref.read(authProvider).currentUser?.uid;
+      if(uid != null) ref.read(gameNotifierProvider.notifier).joinGame(widget.roomId, uid);
+    });
+  }
+
+  @override
   void dispose() {
     _messageController.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = ref.read(authProvider).currentUser?.uid;
+      if(uid != null) ref.read(gameNotifierProvider.notifier).leaveGame(widget.roomId, uid);
+    });
     super.dispose();
   }
 
@@ -73,6 +86,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
         final isTarget = targetUser == currentUid;
 
+        final hasVoted = gameState.votes.containsKey(currentUid);
+
         // 自身がすでにリザルトを閉じている場合のみ、ローカルのステータス表示を 'waiting'（通常チャット画面）に切り替える
         final closedMembers = gameState.closedMembers;
         final hasClosedResult = closedMembers.contains(currentUid);
@@ -80,7 +95,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('チャット'),
+            title: Row(
+              children: [
+                const Text('チャット'),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.circle, size: 8, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${gameState.activeMembers.length}人',
+                        style: const TextStyle(fontSize: 12, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.add),
@@ -99,9 +136,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   icon: const Icon(Icons.sports_esports),
                   tooltip: 'ゲーム開始',
                   onPressed: () {
+                    if (gameState.activeMembers.length < 2) {
+                      // 2人未満のときはSnackBarで表示
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('ゲームは2人以上で開始できます'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      return;
+                    }
                     ref.read(gameNotifierProvider.notifier).startGame(
                       widget.roomId,
-                      members,
+                      gameState.activeMembers,
                     );
                   },
                 )
@@ -112,7 +159,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   onPressed: () {
                     ref.read(gameNotifierProvider.notifier).endGame(
                       widget.roomId,
-                      members,
+                      gameState.activeMembers,
                     );
                   },
                 ),
@@ -238,19 +285,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 ElevatedButton(
-                                  onPressed: () async {
+                                  onPressed: hasVoted?
+                                  null:                                  
+                                  () async {
                                     if (currentUid == null) return;
                                     await ref.read(gameNotifierProvider.notifier).vote(widget.roomId, currentUid, true);
-                                    await ref.read(gameNotifierProvider.notifier).checkVote(widget.roomId, members);
+                                    await ref.read(gameNotifierProvider.notifier).checkVote(widget.roomId, gameState.activeMembers);
                                   },
                                   child: const Text('〇 正解'),
                                 ),
                                 const SizedBox(width: 16),
                                 ElevatedButton(
-                                  onPressed: () async {
+                                  onPressed:hasVoted?
+                                  null:
+                                  () async {
                                     if (currentUid == null) return;
                                     await ref.read(gameNotifierProvider.notifier).vote(widget.roomId, currentUid, false);
-                                    await ref.read(gameNotifierProvider.notifier).checkVote(widget.roomId, members);
+                                    await ref.read(gameNotifierProvider.notifier).checkVote(widget.roomId, gameState.activeMembers);
                                   },
                                   child: const Text('× 不正解'),
                                 ),
@@ -263,15 +314,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (status == 'result')
                 Container(
                   padding: const EdgeInsets.all(16),
-                  color: Colors.red[100],
+                  color:currentUid == targetUser? Colors.red[100] : Colors.green[100],
                   child: Column(
                     children: [
+                      currentUid == targetUser? 
                       const Text(
                         '💥 爆発！',
                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red),
+                      ): 
+                      const Text(
+                        '👑 勝利！',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.amber), // ← 赤から金色に
                       ),
                       const SizedBox(height: 8),
-                      Text('今回のターゲット: 「 $targetUser 」 の負けです！'),
+                      Text(
+                        currentUid == targetUser
+                            ? 'あなたの負けです...'
+                            : '$targetUser の負けです！',
+                      ),
                       const SizedBox(height: 12),
                       ElevatedButton(
                         onPressed: () {
