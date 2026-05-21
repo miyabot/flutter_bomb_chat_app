@@ -1,9 +1,11 @@
-import 'package:bomb_chat/providers.dart';
-import 'package:bomb_chat/screens/chat_screen.dart';
-import 'package:bomb_chat/screens/create_room_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers.dart';
+import 'chat_screen.dart';
+import 'create_room_screen.dart';
+
+/// ログインユーザーが参加しているチャットルームの一覧画面
 class RoomListScreen extends ConsumerStatefulWidget {
   const RoomListScreen({super.key});
 
@@ -15,56 +17,80 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomList = ref.watch(roomsProvider);
-    return roomList.when(
-      data:(snapshot){
-        final docs = snapshot.docs;
+    final roomListState = ref.watch(roomsProvider);
+
+    return roomListState.when(
+      data: (rooms) {
         return Scaffold(
           appBar: AppBar(
             title: const Text('部屋一覧'),
             actions: [
               IconButton(
                 icon: const Icon(Icons.add),
+                tooltip: '部屋を作成',
                 onPressed: () {
-                  //部屋作成画面に遷移
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => CreateRoomScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const CreateRoomScreen(),
+                    ),
                   );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout),
+                tooltip: 'ログアウト',
+                onPressed: () async {
+                  // サインアウトを実行すると、authStateProvider経由でルート画面が自動で切り替わる
+                  await ref.read(authProvider).signOut();
                 },
               ),
             ],
           ),
-          body: ListView.builder(
-            itemCount: docs.length, // リストの長さを指定
-            itemBuilder: (context, index) {
-              // 一度Mapにキャストしてから取り出す
-              final data = docs[index].data() as Map<String, dynamic>;
-              final roomName = data['name'];
-              return ListTile(
-                title: Text(roomName),
-                onTap: () {
-                  //チャット画面に遷移
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ChatScreen(roomId:docs[index].id)),
-                  );
-                },
-              );
-            },
-          ),
+          body: rooms.isEmpty
+              ? const Center(
+                  child: Text('参加している部屋がありません。'),
+                )
+              : ListView.builder(
+                  itemCount: rooms.length,
+                  itemBuilder: (context, index) {
+                    final room = rooms[index];
+                    return ListTile(
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.meeting_room),
+                      ),
+                      title: Text(
+                        room.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatScreen(roomId: room.id),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
         );
       },
-      
-      loading: () =>const Scaffold(body: Center(child: CircularProgressIndicator())),
-
-      // 通信エラーの場合の処理
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
       error: (error, stack) {
-        debugPrint('エラー: $error');
-        debugPrint('詳細: $stack');
+        debugPrint('部屋一覧取得エラー: $error');
         return Scaffold(
           body: Center(
-            child: Text('エラー: $error'),
+            child: Text(
+              'エラーが発生しました。\n再度お試しください。',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.red[700]),
+            ),
           ),
         );
       },

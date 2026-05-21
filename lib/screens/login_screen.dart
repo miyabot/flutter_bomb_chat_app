@@ -1,9 +1,10 @@
-import 'package:bomb_chat/screens/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers.dart';
 
-// Firebase Authenticationを利用したログイン・新規登録画面
+import '../providers.dart';
+import 'register_screen.dart';
+
+// Firebase Authenticationによるサインインを行う画面
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -12,84 +13,102 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  // 入力値管理用コントローラー
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // 通信中のローディング状態管理
   bool _isLoading = false;
 
-  // Firebase Authenticationによるログイン処理
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _login() async {
+    //フォーカスを外す
+    FocusScope.of(context).unfocus();
     setState(() => _isLoading = true);
 
     try {
-      //メールアドレスとパスワードでログイン
       await ref.read(authProvider).signInWithEmailAndPassword(
-        email: _emailController.text.trim(), //trimで前後の空白削除
+        email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
     } catch (e) {
-      // ログイン失敗時はSnackBarでエラー内容を表示
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('ログイン失敗：$e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ログイン失敗：$e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-
-    setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Bomb Chat')),
+      appBar: AppBar(
+        title: const Text('Bomb Chat'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'メールアドレス'),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16), 
-
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'パスワード'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 32),
-
-            // 通信中はローディングUIを表示
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _login,
-                  child: const Text('ログイン'),
+        child: Center(
+          //キーボード表示時、オーバフローを回避
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'メールアドレス',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
                 ),
-              ),
-
-              const SizedBox(height: 12),
-
-              SizedBox(
-                width: double.infinity,
-                child:TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                    );
-                  },
-                  child: const Text('アカウントをお持ちでない方はこちら'),
+                const SizedBox(height: 16), 
+                TextField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'パスワード',
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: true,
                 ),
-              ),
-            ],
-          ],
+                const SizedBox(height: 32),
+                if (_isLoading)
+                  const CircularProgressIndicator()
+                else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _login,
+                      child: const Text('ログイン'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('アカウントをお持ちでない方はこちら'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
