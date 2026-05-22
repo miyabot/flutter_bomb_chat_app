@@ -14,8 +14,11 @@ class MessageModel {
   /// 送信者の Firebase Authentication UID。
   final String uid;
 
-  /// 送信者のメールアドレス（表示名として使用）。
+  /// 送信者のメールアドレス
   final String email;
+
+  /// 名前（表示名として使用）
+  final String name;
 
   /// メッセージが送信された日時。
   final DateTime? createdAt;
@@ -25,6 +28,7 @@ class MessageModel {
     required this.text,
     required this.uid,
     required this.email,
+    required this.name,
     this.createdAt,
   });
 
@@ -44,6 +48,7 @@ class MessageModel {
       text: data['text'] as String? ?? '',
       uid: data['uid'] as String? ?? '',
       email: data['email'] as String? ?? '',
+      name:data['name'] as String? ?? '',
       createdAt: timestamp?.toDate(),
     );
   }
@@ -54,6 +59,7 @@ class MessageModel {
       'text': text,
       'uid': uid,
       'email': email,
+      'name' : name,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
     };
   }

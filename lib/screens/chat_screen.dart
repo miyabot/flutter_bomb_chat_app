@@ -21,22 +21,30 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
 
+  late final String? _currentUid;
+  late final GameNotifier _gameNotifier;
+
   @override
   void initState() {
     super.initState();
+    // initStateで事前に保存しておく
+    _currentUid = ref.read(authProvider).currentUser?.uid;
+    _gameNotifier = ref.read(gameNotifierProvider.notifier);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final uid = ref.read(authProvider).currentUser?.uid;
-      if(uid != null) ref.read(gameNotifierProvider.notifier).joinGame(widget.roomId, uid);
+      if (_currentUid != null) {
+        _gameNotifier.joinGame(widget.roomId, _currentUid!);
+      }
     });
   }
 
   @override
   void dispose() {
     _messageController.dispose();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final uid = ref.read(authProvider).currentUser?.uid;
-      if(uid != null) ref.read(gameNotifierProvider.notifier).leaveGame(widget.roomId, uid);
-    });
+    // 保存したものを使う（refは使わない）
+    if (_currentUid != null) {
+      _gameNotifier.leaveGame(widget.roomId, _currentUid!);
+    }
     super.dispose();
   }
 
@@ -46,6 +54,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final user = ref.read(authProvider).currentUser;
     if (user == null) return;
+
+    final userModel = ref.read(currentUserProvider).value;
+    final name = userModel?.name ?? '';
 
     _messageController.clear();
 
@@ -58,6 +69,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         'text': text,
         'uid': user.uid,
         'email': user.email,
+        'name' : name,
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -223,39 +235,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                           return Align(
                             alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(
-                                vertical: 4,
-                                horizontal: 12,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 14,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isMe ? Colors.blue : Colors.grey[300],
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    message.email,
+                            child: Column(
+                              
+                              children: [
+                                if(!isMe)
+                                Text(
+                                    message.name,
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: isMe ? Colors.white70 : Colors.black54,
+                                      color:Colors.black54,
                                     ),
+                                ),
+                                Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                    horizontal: 12,
                                   ),
-                                  Text(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 14,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isMe ? Colors.blue : Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
                                     message.text,
                                     style: TextStyle(
                                       color: isMe ? Colors.white : Colors.black,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           );
                         },
