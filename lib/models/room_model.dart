@@ -23,7 +23,6 @@ class RoomModel {
   /// このルームに関連付けられたゲームの現在の状態。
   final GameState gameState;
 
-
   const RoomModel({
     required this.id,
     required this.name,

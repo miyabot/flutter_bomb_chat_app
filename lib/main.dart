@@ -2,7 +2,6 @@ import 'package:bomb_chat/screens/profile_setup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod/src/framework.dart';
 
 import 'firebase_options.dart';
 import 'providers.dart';
@@ -31,6 +30,13 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Bomb Chat',
+      theme:ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blueGrey,
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
       home: authState.when(
         data: (user){
           if(user == null){

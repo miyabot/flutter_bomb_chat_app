@@ -33,7 +33,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_currentUid != null) {
-        _gameNotifier.joinGame(widget.roomId, _currentUid!);
+        _gameNotifier.joinGame(widget.roomId, _currentUid);
       }
     });
   }
@@ -43,7 +43,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _messageController.dispose();
     // 保存したものを使う（refは使わない）
     if (_currentUid != null) {
-      _gameNotifier.leaveGame(widget.roomId, _currentUid!);
+      _gameNotifier.leaveGame(widget.roomId, _currentUid);
     }
     super.dispose();
   }
@@ -54,9 +54,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final user = ref.read(authProvider).currentUser;
     if (user == null) return;
-
-    final userModel = ref.read(currentUserProvider).value;
-    final name = userModel?.name ?? '';
 
     _messageController.clear();
 
@@ -69,7 +66,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         'text': text,
         'uid': user.uid,
         'email': user.email,
-        'name' : name,
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -95,6 +91,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         final targetUser = gameState.targetUser;
         final question = gameState.question;
         final currentUid = ref.read(authProvider).currentUser?.uid;
+
+        final targetNameAsync = ref.watch(userNameProvider(targetUser));
+        final targetNameSnapshot = targetNameAsync.value;
+        final targetDisplayName = (targetNameSnapshot == null || targetNameSnapshot.isEmpty) ? '相手' : targetNameSnapshot;
 
         final isTarget = targetUser == currentUid;
 
@@ -233,6 +233,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           final message = messages[index];
                           final isMe = message.uid == currentUid;
 
+                          final nameAsync = ref.watch(userNameProvider(message.uid));
+                          final nameSnapshot = nameAsync.value;
+                          final name = (nameSnapshot == null || nameSnapshot.isEmpty) ? '' : nameSnapshot;
+
                           return Align(
                             alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                             child: Column(
@@ -240,7 +244,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               children: [
                                 if(!isMe)
                                 Text(
-                                    message.name,
+                                    name,
                                     style: TextStyle(
                                       fontSize: 10,
                                       color:Colors.black54,
@@ -341,7 +345,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       Text(
                         currentUid == targetUser
                             ? 'あなたの負けです...'
-                            : '$targetUser の負けです！',
+                            : '$targetDisplayName の負けです！',
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(

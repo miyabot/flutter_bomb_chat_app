@@ -60,6 +60,17 @@ final currentRoomStateProvider = StreamProvider.family<RoomModel, String>((ref, 
       .map((doc) => RoomModel.fromDocument(doc));
 });
 
+final userNameProvider = StreamProvider.family<String, String>((ref, uid) {
+  return ref.watch(firestoreProvider)
+      .collection('users')
+      .where('uid', isEqualTo: uid)
+      .snapshots()
+      .map((snapshot) {
+        if (snapshot.docs.isEmpty) return '';
+        return snapshot.docs.first.data()['name'] as String? ?? '';
+      });
+});
+
 /// アカウント登録処理およびFirestoreへの初期ユーザー情報登録を行うクラス
 class AuthNotifier extends AsyncNotifier<void> {
   Future<void> register(String email, String password) async {
