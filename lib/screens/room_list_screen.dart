@@ -1,3 +1,4 @@
+import 'package:bomb_chat/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,6 +26,15 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
           appBar: AppBar(
             title: const Text('部屋一覧'),
             actions: [
+              IconButton(
+                onPressed: (){
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(builder: (context)=>const ProfileScreen())
+                  );
+                }, 
+                icon: Icon(Icons.person)
+              ),
               IconButton(
                 icon: const Icon(Icons.add),
                 tooltip: '部屋を作成',
