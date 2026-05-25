@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
 
-/// 新規チャットルームの作成画面
 class CreateRoomScreen extends ConsumerStatefulWidget {
   const CreateRoomScreen({super.key});
 
@@ -25,12 +24,8 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     if (roomName.isEmpty) return;
 
     try {
-      // データベース登録のビジネスロジックはRoomNotifierに委譲（MVVM設計）
       await ref.read(roomNotifierProvider.notifier).createRoom(roomName);
-
-      if (mounted) {
-        Navigator.pop(context);
-      }
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -43,26 +38,35 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('部屋作成'),
-      ),
+      appBar: AppBar(title: const Text('部屋を作成')),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Center(
-          child: TextField(
-            controller: _roomNameController,
-            decoration: const InputDecoration(
-              labelText: '部屋名を入力してください',
-              hintText: '例: 雑談部屋',
-              border: OutlineInputBorder(),
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 16),
+            const Text(
+              '新しいチャットルームを作成します',
+              style: TextStyle(fontSize: 14, color: Color(0xFFB0B0C0)),
             ),
-          ),
+            const SizedBox(height: 28),
+            TextField(
+              controller: _roomNameController,
+              decoration: const InputDecoration(
+                labelText: '部屋名',
+                hintText: '例: 雑談部屋',
+                prefixIcon: Icon(Icons.meeting_room_rounded),
+              ),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _createRoom(),
+            ),
+          ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _createRoom,
-        tooltip: '作成',
-        child: const Icon(Icons.check),
+        icon: const Icon(Icons.check),
+        label: const Text('作成', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }

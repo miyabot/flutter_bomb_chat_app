@@ -6,7 +6,6 @@ import '../providers.dart';
 import 'chat_screen.dart';
 import 'create_room_screen.dart';
 
-/// ログインユーザーが参加しているチャットルームの一覧画面
 class RoomListScreen extends ConsumerStatefulWidget {
   const RoomListScreen({super.key});
 
@@ -15,7 +14,6 @@ class RoomListScreen extends ConsumerStatefulWidget {
 }
 
 class _RoomListScreenState extends ConsumerState<RoomListScreen> {
-
   @override
   Widget build(BuildContext context) {
     final roomListState = ref.watch(roomsProvider);
@@ -24,73 +22,120 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
       data: (rooms) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('部屋一覧'),
+            title: const Row(
+              children: [
+                Text('💣', style: TextStyle(fontSize: 20)),
+                SizedBox(width: 8),
+                Text('ルーム一覧'),
+              ],
+            ),
             actions: [
               IconButton(
-                onPressed: (){
-                  Navigator.push(
-                    context, 
-                    MaterialPageRoute(builder: (context)=>const ProfileScreen())
-                  );
-                }, 
-                icon: Icon(Icons.person)
-              ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                tooltip: '部屋を作成',
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const CreateRoomScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
                   );
                 },
+                icon: const Icon(Icons.person_outline),
+                tooltip: 'プロフィール',
               ),
               IconButton(
                 icon: const Icon(Icons.logout),
                 tooltip: 'ログアウト',
                 onPressed: () async {
-                  // サインアウトを実行すると、authStateProvider経由でルート画面が自動で切り替わる
                   await ref.read(authProvider).signOut();
                 },
               ),
             ],
           ),
           body: rooms.isEmpty
-              ? const Center(
-                  child: Text('参加している部屋がありません。'),
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('💣', style: TextStyle(fontSize: 64)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        '参加している部屋がありません',
+                        style: TextStyle(fontSize: 16, color: Color(0xFFB0B0C0)),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '右下のボタンから部屋を作成しましょう',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF6060A0)),
+                      ),
+                    ],
+                  ),
                 )
               : ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   itemCount: rooms.length,
                   itemBuilder: (context, index) {
                     final room = rooms[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.meeting_room),
-                      ),
-                      title: Text(
-                        room.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ChatScreen(roomId: room.id),
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(roomId: room.id),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF252540),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.meeting_room_rounded,
+                                  color: Color(0xFFE53935),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  room.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right, color: Color(0xFFB0B0C0)),
+                            ],
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     );
                   },
                 ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CreateRoomScreen()),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('部屋を作成', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         );
       },
       loading: () => const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFFE53935))),
       ),
       error: (error, stack) {
         debugPrint('部屋一覧取得エラー: $error');
@@ -99,7 +144,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
             child: Text(
               'エラーが発生しました。\n再度お試しください。',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.red[700]),
+              style: TextStyle(color: Colors.red[400]),
             ),
           ),
         );

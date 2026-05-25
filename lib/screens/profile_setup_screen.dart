@@ -27,9 +27,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
     try {
       await ref.read(authNotifierProvider.notifier).saveName(name);
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -44,38 +42,52 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('名前を設定しよう！')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Bomb Chatへようこそ！\nまず表示名を設定してください。',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 32),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: '表示名',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _saveName,
-                  child: const Text('はじめる'),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('💣', style: TextStyle(fontSize: 72), textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+              const Text(
+                'Bomb Chatへようこそ！',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
+                textAlign: TextAlign.center,
               ),
-          ],
+              const SizedBox(height: 8),
+              const Text(
+                'まずは表示名を設定してください',
+                style: TextStyle(fontSize: 14, color: Color(0xFFB0B0C0)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: '表示名',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _saveName(),
+              ),
+              const SizedBox(height: 24),
+              if (_isLoading)
+                const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFE53935)),
+                )
+              else
+                ElevatedButton(
+                  onPressed: _saveName,
+                  child: const Text('はじめる！'),
+                ),
+            ],
+          ),
         ),
       ),
     );

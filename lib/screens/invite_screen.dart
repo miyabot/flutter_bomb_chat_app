@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
 
-/// ルームに他のユーザーを追加（招待）する画面
 class InviteScreen extends ConsumerStatefulWidget {
   final String roomId;
-  
+
   const InviteScreen({
     super.key,
     required this.roomId,
@@ -61,34 +60,33 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ユーザーを追加'),
-      ),
+      appBar: AppBar(title: const Text('ユーザーを追加')),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: _userIdController,
-                decoration: const InputDecoration(
-                  labelText: 'ユーザー招待ID (6桁)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_add),
-                ),
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 16),
+            const Text(
+              '招待IDを入力してユーザーをルームに追加できます',
+              style: TextStyle(fontSize: 14, color: Color(0xFFB0B0C0)),
+            ),
+            const SizedBox(height: 28),
+            TextField(
+              controller: _userIdController,
+              decoration: const InputDecoration(
+                labelText: 'ユーザー招待ID（6桁）',
+                prefixIcon: Icon(Icons.person_add_outlined),
               ),
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _inviteUser,
-                  child: const Text('ユーザーを追加する'),
-                ),
-              ),
-            ],
-          ),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _inviteUser(),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _inviteUser,
+              child: const Text('ユーザーを追加する'),
+            ),
+          ],
         ),
       ),
     );

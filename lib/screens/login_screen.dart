@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 import 'register_screen.dart';
 
-// Firebase Authenticationによるサインインを行う画面
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -25,7 +24,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    //フォーカスを外す
     FocusScope.of(context).unfocus();
     setState(() => _isLoading = true);
 
@@ -41,73 +39,102 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bomb Chat'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Center(
-          //キーボード表示時、オーバフローを回避
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'メールアドレス',
-                    border: OutlineInputBorder(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // ロゴヘッダー
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 56),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  keyboardType: TextInputType.emailAddress,
                 ),
-                const SizedBox(height: 16), 
-                TextField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'パスワード',
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
+                child: Column(
+                  children: [
+                    const Text('💣', style: TextStyle(fontSize: 80)),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'BOMB CHAT',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFE53935),
+                        letterSpacing: 4,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '爆発を回避せよ',
+                      style: TextStyle(fontSize: 13, color: Color(0xFFB0B0C0)),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 32),
-                if (_isLoading)
-                  const CircularProgressIndicator()
-                else ...[
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _login,
-                      child: const Text('ログイン'),
+              ),
+
+              // フォームエリア
+              Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'メールアドレス',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('アカウントをお持ちでない方はこちら'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(
+                        labelText: 'パスワード',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                      obscureText: true,
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    const SizedBox(height: 32),
+                    if (_isLoading)
+                      const Center(
+                        child: CircularProgressIndicator(color: Color(0xFFE53935)),
+                      )
+                    else ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _login,
+                          child: const Text('ログイン'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          );
+                        },
+                        child: const Text('アカウントをお持ちでない方はこちら'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

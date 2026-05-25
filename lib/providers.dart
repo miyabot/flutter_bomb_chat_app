@@ -145,6 +145,31 @@ class RoomNotifier extends Notifier<void> {
     });
   }
 
+  Future<void> leaveRoom(String roomId) async {
+    final uid = ref.read(authProvider).currentUser?.uid;
+    if(uid == null) return;
+
+    final docRef = ref.read(firestoreProvider)
+      .collection('rooms')
+      .doc(roomId);
+    
+    await docRef.update({
+      // membersから自分を削除
+      'members':FieldValue.arrayRemove([uid])
+    });
+
+    // 削除後のmembersを確認
+    final doc = await docRef.get();
+    final data = doc.data();
+    if(data == null)return;
+
+    // membersが空になったらルームを削除
+    final members = List<String>.from(data['members'] ?? []);
+    if(members.isEmpty){
+      await docRef.delete();
+    }
+  }
+
   Future<bool> inviteUserByCode({
     required String roomId,
     required String inviteCode,

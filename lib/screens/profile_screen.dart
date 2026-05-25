@@ -11,82 +11,97 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-
   bool _isEditing = false;
   final _nameController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title:Text('プロフィール')
-      ),
-      body:ref.watch(currentUserProvider).when(
-        data: (userModel){
-          if(userModel == null) return const Center(child: Text('データがありません'),);
-          return Padding(
-            padding: const EdgeInsets.all(24.0),
+      appBar: AppBar(title: const Text('プロフィール')),
+      body: ref.watch(currentUserProvider).when(
+        data: (userModel) {
+          if (userModel == null) {
+            return const Center(child: Text('データがありません'));
+          }
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircleAvatar(
-                  radius: 48,
-                  child:Icon(Icons.person,size: 64,)
+                const SizedBox(height: 16),
+                // アバター（グラデーション枠）
+                Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFE53935), Color(0xFFFF7043)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(3),
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundColor: const Color(0xFF1A1A2E),
+                    child: const Icon(Icons.person, size: 52, color: Color(0xFFB0B0C0)),
+                  ),
                 ),
+                const SizedBox(height: 20),
+
+                // 名前 + 編集
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _isEditing ? 
-                    SizedBox(
-                      width: 200,
-                      child: TextField(
-                        controller: _nameController,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ):
-                    Text(
-                      userModel.name,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    _isEditing
+                        ? SizedBox(
+                            width: 200,
+                            child: TextField(
+                              controller: _nameController,
+                              autofocus: true,
+                              decoration: const InputDecoration(
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            userModel.name,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                     IconButton(
                       onPressed: () async {
                         if (_isEditing) {
-                          // 保存処理
                           await ref.read(authNotifierProvider.notifier)
                               .saveName(_nameController.text.trim());
                           setState(() => _isEditing = false);
                         } else {
-                          // 編集開始
                           _nameController.text = userModel.name;
                           setState(() => _isEditing = true);
                         }
                       },
-                      icon: Icon(_isEditing ? Icons.check : Icons.edit),
+                      icon: Icon(
+                        _isEditing ? Icons.check_circle : Icons.edit,
+                        color: const Color(0xFFE53935),
+                      ),
                     ),
                   ],
                 ),
+
                 Text(
                   userModel.email,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: Color(0xFFB0B0C0)),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
 
+                // 招待IDカード
                 Container(
-                  padding: const EdgeInsets.all(16),
-                  
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF3D3D5C)),
                   ),
                   child: Row(
                     children: [
@@ -95,38 +110,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           const Text(
                             '招待ID',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                            style: TextStyle(fontSize: 12, color: Color(0xFFB0B0C0)),
                           ),
+                          const SizedBox(height: 4),
                           Text(
                             userModel.userId,
                             style: const TextStyle(
-                              fontSize: 20,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
+                              letterSpacing: 4,
+                              color: Color(0xFFE53935),
                             ),
                           ),
                         ],
-                      ),  
+                      ),
+                      const Spacer(),
                       IconButton(
                         tooltip: 'IDをコピー',
-                        onPressed: (){
+                        onPressed: () {
                           Clipboard.setData(ClipboardData(text: userModel.userId));
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('IDをコピーしました')),
                           );
-                        }, 
-                        icon: Icon(Icons.copy)
-                      )
+                        },
+                        icon: const Icon(Icons.copy, color: Color(0xFFB0B0C0)),
+                      ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           );
         },
-        loading: () =>Center(child: CircularProgressIndicator()),
-        error: (error, stack) =>Center(child: Text('エラーが発生しました: $error')),
-      )
+        loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFE53935))),
+        error: (error, stack) => Center(child: Text('エラーが発生しました: $error')),
+      ),
     );
   }
 }
