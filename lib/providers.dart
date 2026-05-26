@@ -190,6 +190,12 @@ class RoomNotifier extends Notifier<void> {
     return true;
   }
 
+  Future<void> renameRoom(String roomId,String newName)async{
+    await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
+      'name':newName
+    });
+  }
+
   @override
   void build() {}
 }

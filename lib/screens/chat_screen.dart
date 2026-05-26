@@ -135,18 +135,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ],
               ),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.person_add_outlined),
-                  tooltip: 'ユーザーを招待',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => InviteScreen(roomId: widget.roomId),
-                      ),
-                    );
-                  },
-                ),
                 if (status == 'waiting')
                   IconButton(
                     icon: const Icon(Icons.sports_esports),
@@ -178,49 +166,126 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       );
                     },
                   ),
-                IconButton(
-                  icon: Icon(Icons.exit_to_app),
-                  tooltip: 'ルームを退会',
-                  onPressed: ()async{
-                    final confirm = await showDialog(
-                      context: context, 
-                      builder: (context)=>AlertDialog(
-                        title:const Text('ルーム退会'),
-                        content:const Text('このルームから退会しますか？'),
-                        actions: [
-                          TextButton(
-                            onPressed: (){
-                              Navigator.pop(context,false);
-                            }, 
-                            child: const Text('キャンセル')
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) async {
+                    switch (value) {
+                      case 'invite':
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => InviteScreen(roomId: widget.roomId),
                           ),
-                          ElevatedButton(
-                            onPressed: (){
-                              Navigator.pop(context,true);
-                            }, 
-                            child: const Text('退会する')
-                          ),
-                        ],
-                      )
-                    );
-                    if(!confirm) return;
-                    if (!context.mounted) return;
+                        );
+                        break;
 
-                    await ref.read(roomNotifierProvider.notifier).leaveRoom(widget.roomId);
-                    if(context.mounted){
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    }
-                  }, 
-                ),
-                IconButton(
-                  icon: const Icon(Icons.logout),
-                  tooltip: 'ログアウト',
-                  onPressed: () async {
-                    await ref.read(authProvider).signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      case 'rename':
+                        final nameController = TextEditingController();
+                        final newName =await showDialog<bool>(
+                          context: context, 
+                          builder: (context)=>AlertDialog(
+                            title:const Text('ルーム名の変更'),
+                            content: TextField(
+                              controller: nameController,
+                              decoration: InputDecoration(
+                                labelText: '新しいルーム名'
+                              ),
+                              autofocus: true,
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('キャンセル'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('変更'),
+                              ),
+                            ],
+                          )
+                        );
+                        nameController.dispose();
+                        if(newName != true) return;
+                        if(!context.mounted) return;
+                        await ref.read(roomNotifierProvider.notifier).renameRoom(widget.roomId,nameController.text);
+                        break;
+
+                      case 'leave':
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('ルームを退会'),
+                            content: const Text('このルームから退会しますか？'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('キャンセル'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('退会する'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm != true) return;
+                        if (!context.mounted) return;
+                        await ref.read(roomNotifierProvider.notifier)
+                            .leaveRoom(widget.roomId);
+                        if (context.mounted) {
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                        }
+                        break;
+                      case 'logout':
+                        await ref.read(authProvider).signOut();
+                        if (context.mounted) {
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                        }
+                        break;
                     }
                   },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'invite',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_add),
+                          SizedBox(width: 8),
+                          Text('ユーザーを招待'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'rename',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit),
+                          SizedBox(width: 8),
+                          Text('ルーム名の変更'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'leave',
+                      child: Row(
+                        children: [
+                          Icon(Icons.exit_to_app),
+                          SizedBox(width: 8),
+                          Text('ルームを退会'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout),
+                          SizedBox(width: 8),
+                          Text('ログアウト'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

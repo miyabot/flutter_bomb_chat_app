@@ -11,13 +11,31 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProviderStateMixin{
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration:const Duration(milliseconds: 800)
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(
+      begin: 0.9,
+      end:1.1
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
   @override
   void dispose() {
+    _controller.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -63,7 +81,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Text('💣', style: TextStyle(fontSize: 80)),
+                    ScaleTransition(
+                      scale: _animation,
+                      child: const Text('💣', style: TextStyle(fontSize: 80)),
+                    ),
                     const SizedBox(height: 12),
                     const Text(
                       'BOMB CHAT',
