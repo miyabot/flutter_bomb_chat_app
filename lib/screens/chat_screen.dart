@@ -19,6 +19,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
+  final _expandedAnswers = <String>{}; // 展開中の回答メッセージID
 
   late final String? _currentUid;
   late final GameNotifier _gameNotifier;
@@ -63,6 +64,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         'text': text,
         'uid': user.uid,
         'email': user.email,
+        'type': 'chat',
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -332,9 +334,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               const SizedBox(height: 12),
                               ElevatedButton(
                                 onPressed: () {
-                                  _sendMessage();
+                                  final answerText = _messageController.text.trim();
+                                  if (answerText.isEmpty) return;
                                   _messageController.clear();
-                                  ref.read(gameNotifierProvider.notifier).startVoting(widget.roomId);
+                                  ref.read(gameNotifierProvider.notifier)
+                                      .startVoting(widget.roomId, answerText);
                                 },
                                 child: const Text('回答する'),
                               ),
@@ -379,6 +383,135 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             final nameSnapshot = nameAsync.value;
                             final name = (nameSnapshot == null || nameSnapshot.isEmpty) ? '' : nameSnapshot;
 
+                            // ゲームセッションカード（全ラウンドをまとめて折りたたみ表示）
+                            if (message.type == 'game_session') {
+                              final isExpanded = _expandedAnswers.contains(message.id);
+                              final rounds = message.rounds;
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0D1526),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF4488CC), width: 1.5),
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isExpanded) {
+                                        _expandedAnswers.remove(message.id);
+                                      } else {
+                                        _expandedAnswers.add(message.id);
+                                      }
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(11),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // ヘッダー（常に表示）
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                        child: Row(
+                                          children: [
+                                            const Text('🎮', style: TextStyle(fontSize: 13)),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'ゲーム（${rounds.length}ターン）',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: Color(0xFF4488CC),
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            AnimatedRotation(
+                                              turns: isExpanded ? 0.5 : 0,
+                                              duration: const Duration(milliseconds: 200),
+                                              child: const Icon(
+                                                Icons.keyboard_arrow_down,
+                                                color: Color(0xFF4488CC),
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // 展開時：全ラウンドをリスト表示
+                                      AnimatedSize(
+                                        duration: const Duration(milliseconds: 200),
+                                        curve: Curves.easeInOut,
+                                        child: isExpanded
+                                            ? Column(
+                                                children: [
+                                                  const Divider(color: Color(0xFF1A2A3A), height: 1),
+                                                  // asMap() でインデックス付きMapに変換→ entries で1件ずつ取り出す
+                                                  // （インデックスが必要なのは isLast の判定のためだけ）
+                                                  // ... はリストをバラして children に直接追加するスプレッド演算子
+                                                  ...rounds.asMap().entries.map((entry) {
+                                                    final i = entry.key;   // インデックス（0, 1, 2...）
+                                                    final round = entry.value; // ラウンドデータのMap
+
+                                                    // Mapから各値を取り出す（as型? で型指定、nullなら??でデフォルト値）
+                                                    final roundUid    = round['uid']            as String? ?? '';
+                                                    final roundAnswer = round['answer']         as String? ?? '';
+                                                    final correct     = round['correctVotes']   as int?    ?? 0;
+                                                    final incorrect   = round['incorrectVotes'] as int?    ?? 0;
+
+                                                    // 最後のラウンドか判定（区切り線と余白の出し分けに使う）
+                                                    final isLast = i == rounds.length - 1;
+
+                                                    // uidからユーザー名をリアルタイム取得（取れるまで '...' を表示）
+                                                    final roundName = ref.watch(userNameProvider(roundUid)).value ?? '...';
+
+                                                    return Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Padding(
+                                                          // 最後のラウンドだけ下余白を大きくする
+                                                          padding: EdgeInsets.fromLTRB(14, 10, 14, isLast ? 14 : 6),
+                                                          child: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              // 1行目：「PlayerA：ラーメンです！」
+                                                              Row(
+                                                                children: [
+                                                                  Text(roundName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                                                  const Text('：', style: TextStyle(color: Color(0xFFB0B0C0))),
+                                                                  // Expanded で残り幅を使って回答テキストを表示
+                                                                  Expanded(child: Text(roundAnswer, style: const TextStyle(color: Colors.white, fontSize: 13))),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 4),
+                                                              // 2行目：「✅ 正解：2  ❌ 不正解：1」
+                                                              Row(
+                                                                children: [
+                                                                  const Text('✅ 正解：', style: TextStyle(color: Color(0xFF4CAF50), fontSize: 12)),
+                                                                  Text('$correct', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                                                  const SizedBox(width: 12),
+                                                                  const Text('❌ 不正解：', style: TextStyle(color: Color(0xFFE53935), fontSize: 12)),
+                                                                  Text('$incorrect', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                                                ],
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        // 最後以外のラウンドの間に区切り線を入れる
+                                                        if (!isLast)
+                                                          const Divider(color: Color(0xFF1A2A3A), height: 1, indent: 14, endIndent: 14),
+                                                      ],
+                                                    );
+                                                  }),
+                                                ],
+                                              )
+                                            : const SizedBox.shrink(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            // 通常チャット
                             return Align(
                               alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                               child: Column(

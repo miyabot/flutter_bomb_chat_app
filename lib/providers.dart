@@ -140,7 +140,9 @@ class RoomNotifier extends Notifier<void> {
         'fuseCount': 0,
         'maxFuse': 5,
         'closedMembers': [],
-        'activeMembers': []
+        'activeMembers': [],
+        'currentAnswer': '',
+        'rounds': [],
       },
     });
   }
@@ -242,9 +244,10 @@ class GameNotifier extends Notifier<void> {
     });
   }
 
-  Future<void> startVoting(String roomId) async {
+  Future<void> startVoting(String roomId, String answerText) async {
     await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
       'gameState.status': 'voting',
+      'gameState.currentAnswer': answerText, // 投票完了時のサマリー保存に使う
     });
   }
 
@@ -273,18 +276,45 @@ class GameNotifier extends Notifier<void> {
     final voters = activeMembers.where((uid) => uid != targetUser).toList();
     if (votes.length < voters.length) return;
 
+    final correctCount = votes.values.where((v) => v == true).length;
     final missCount = votes.values.where((v) => v == false).length;
     final newFuseCount = fuseCount + (missCount > 0 ? 1 : 0);
+    final currentAnswer = gameState['currentAnswer'] as String? ?? '';
+
+    // 今回のラウンドデータ（名前はUI側でuidから取得するため uid だけ保存）
+    final existingRounds = (gameState['rounds'] as List<dynamic>? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    final roundData = {
+      'uid': targetUser,
+      'answer': currentAnswer,
+      'correctVotes': correctCount,
+      'incorrectVotes': missCount,
+    };
+    final updatedRounds = [...existingRounds, roundData];
 
     if (newFuseCount >= maxFuse) {
-      // 導火線のカウントが上限に達したためゲームオーバー（結果画面へ）
+      // 爆発：全ラウンドをまとめて game_session メッセージとして1件保存
+      await ref.read(firestoreProvider)
+          .collection('rooms')
+          .doc(roomId)
+          .collection('messages')
+          .add({
+        'type': 'game_session',
+        'text': '',
+        'uid': '',
+        'email': '',
+        'name': '',
+        'rounds': updatedRounds,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
       await ref.read(firestoreProvider).collection('rooms').doc(roomId).update({
         'gameState.status': 'result',
         'gameState.fuseCount': newFuseCount,
         'gameState.closedMembers': [],
       });
     } else {
-      // 次の回答者を抽選し、新しいお題を設定してターンを切り替える
+      // 次のターンへ：ラウンドデータを蓄積してゲーム続行
       final random = Random();
       final newTargetUser = activeMembers[random.nextInt(activeMembers.length)];
       final questions = [
@@ -302,6 +332,7 @@ class GameNotifier extends Notifier<void> {
         'gameState.votes': {},
         'gameState.targetUser': newTargetUser,
         'gameState.question': newQuestion,
+        'gameState.rounds': updatedRounds, // ラウンドを蓄積
       });
     }
   }
@@ -315,6 +346,7 @@ class GameNotifier extends Notifier<void> {
       'gameState.maxFuse': 5,
       'gameState.votes': {},
       'gameState.closedMembers': [],
+      'gameState.rounds': [], // ラウンドもリセット
     });
   }
 

@@ -93,6 +93,12 @@ class GameState {
   /// ゲームに参加しているメンバーの UID リスト
   final List<String> activeMembers;
 
+  /// 現在ターンの回答テキスト（投票時に参照してサマリー保存に使う）
+  final String currentAnswer;
+
+  /// このゲームセッションで積み上がったラウンドデータ（爆発時にまとめてメッセージ化）
+  final List<Map<String, dynamic>> rounds;
+
   const GameState({
     required this.status,
     required this.targetUser,
@@ -101,7 +107,9 @@ class GameState {
     required this.fuseCount,
     required this.maxFuse,
     required this.closedMembers,
-    required this.activeMembers
+    required this.activeMembers,
+    this.currentAnswer = '',
+    this.rounds = const [],
   });
 
   /// Firestore から取得した Map から [GameState] を生成するファクトリコンストラクタ。
@@ -123,7 +131,11 @@ class GameState {
       fuseCount: map['fuseCount'] as int? ?? 0,
       maxFuse: map['maxFuse'] as int? ?? 5,
       closedMembers: closedList,
-      activeMembers:activeList
+      activeMembers: activeList,
+      currentAnswer: map['currentAnswer'] as String? ?? '',
+      rounds: (map['rounds'] as List<dynamic>? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(),
     );
   }
 
@@ -137,7 +149,9 @@ class GameState {
       'fuseCount': fuseCount,
       'maxFuse': maxFuse,
       'closedMembers': closedMembers,
-      'activeMembers':activeMembers
+      'activeMembers': activeMembers,
+      'currentAnswer': currentAnswer,
+      'rounds': rounds,
     };
   }
 }
