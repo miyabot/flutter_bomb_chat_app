@@ -1,3 +1,5 @@
+import 'package:bomb_chat/utils/auth_error_message.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,13 +34,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _passwordController.text.trim(),
       );
       if (mounted) Navigator.of(context).pop();
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
+        final message = authErrorMessage(e.code);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('登録失敗：$e')),
+          SnackBar(content: Text(message)),
         );
       }
-    } finally {
+    }finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }

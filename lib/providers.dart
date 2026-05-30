@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:bomb_chat/models/user_model.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,6 +13,7 @@ import 'models/message_model.dart';
 // テスト時のモック化やテスト容易性を高めるDI用プロバイダー
 final authProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
 final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
+final storageProvider = Provider<FirebaseStorage>((ref) => FirebaseStorage.instance);
 
 final authStateProvider = StreamProvider<User?>((ref) {
   return ref.watch(authProvider).authStateChanges();
@@ -38,6 +41,17 @@ final messagesProvider = StreamProvider.family<List<MessageModel>, String>((ref,
       .orderBy('createdAt', descending: false)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => MessageModel.fromDocument(doc)).toList());
+});
+
+final userAvatarProvider = StreamProvider.family<String,String>((ref,uid){
+  return ref.watch(firestoreProvider).
+      collection('users').
+      where('uid',isEqualTo: uid).
+      snapshots().
+      map((snapshot){
+        if (snapshot.docs.isEmpty) return '';
+        return snapshot.docs.first.data()['avatarUrl'] as String? ?? '';
+      });
 });
 
 final roomsProvider = StreamProvider<List<RoomModel>>((ref) {
@@ -113,7 +127,24 @@ class AuthNotifier extends AsyncNotifier<void> {
       .collection('users')
       .doc(query.docs.first.id)
       .update({'name': name});
-    }
+  }
+
+  Future<void> uploadAvatar(String filePath) async {
+    final uid = ref.read(authProvider).currentUser?.uid;
+    if(uid == null) return;
+
+    //storageにアップロード
+    final storageRef = ref.read(storageProvider).ref().child('avatars/$uid.jpg');
+    
+    await storageRef.putFile(File(filePath));
+
+    //ダウンロードURLの取得
+    final url = await storageRef.getDownloadURL();
+
+    final query = await ref.read(firestoreProvider).collection('users').where('uid',isEqualTo: uid).get();
+    if(query.docs.isEmpty) return;
+    await ref.read(firestoreProvider).collection('users').doc(query.docs.first.id).update({'avatarUrl': url});
+  }
 
   @override
   Future<void> build() async {}

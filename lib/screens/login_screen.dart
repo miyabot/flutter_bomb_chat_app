@@ -1,3 +1,6 @@
+import 'package:bomb_chat/utils/auth_error_message.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -50,10 +53,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-    } catch (e) {
+    }on FirebaseAuthException catch (e) {
+      // FirebaseAuthのエラーコードを日本語に変換
+      final message = authErrorMessage(e.code);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ログイン失敗：$e')),
+          SnackBar(content: Text(message)),
         );
       }
     } finally {

@@ -127,7 +127,7 @@ class MyApp extends ConsumerWidget {
         data: (user){
           if(user == null){
             return const LoginScreen();
-          } 
+          }
           // nameが設定されているか確認
           return ref.watch(currentUserProvider).when(
             data: (userModel) {

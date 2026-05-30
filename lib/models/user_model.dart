@@ -20,12 +20,16 @@ class UserModel {
   /// ユーザーの名前
   final String name;
 
+  /// アバターURL
+  final String avatarUrl;
+
   const UserModel({
     required this.uid,
     required this.email,
     required this.userId,
     this.createdAt,
-    required this.name
+    required this.name,
+    required this.avatarUrl
   });
 
   /// Firestore の [DocumentSnapshot] から [UserModel] を生成するファクトリコンストラクタ。
@@ -45,7 +49,8 @@ class UserModel {
       email: data['email'] as String? ?? '',
       userId: data['userId'] as String? ?? '',
       createdAt: timestamp?.toDate(),
-      name:data['name'] as String? ?? ''
+      name:data['name'] as String? ?? '',
+      avatarUrl:data['avatarUrl'] as String? ?? ''
     );
   }
 
@@ -57,6 +62,7 @@ class UserModel {
       'userId': userId,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
       'name': name,
+      'avatarUrl':avatarUrl
     };
   }
 }

@@ -383,6 +383,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             final nameSnapshot = nameAsync.value;
                             final name = (nameSnapshot == null || nameSnapshot.isEmpty) ? '' : nameSnapshot;
 
+                            final avatarUrl = ref.watch(userAvatarProvider(message.uid)).value ?? '';
+
+
                             // ゲームセッションカード（全ラウンドをまとめて折りたたみ表示）
                             if (message.type == 'game_session') {
                               final isExpanded = _expandedAnswers.contains(message.id);
@@ -512,52 +515,68 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             }
 
                             // 通常チャット
-                            return Align(
-                              alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                              child: Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  if (!isMe && name.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 16, bottom: 2),
-                                      child: Text(
-                                        name,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFFB0B0C0),
+                            return Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children:[ 
+                                  if(!isMe)...[
+                                    CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: const Color(0xFF1A1A2E),
+                                      backgroundImage: avatarUrl.isNotEmpty
+                                          ? NetworkImage(avatarUrl)
+                                          : null,
+                                      child: avatarUrl.isEmpty
+                                          ? const Icon(Icons.person, size: 16, color: Color(0xFFB0B0C0))
+                                          : null, 
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Column(
+                                  crossAxisAlignment: isMe
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                                  children: [
+                                    if (!isMe && name.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 4, bottom: 2),
+                                        child: Text(
+                                          name,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFFB0B0C0),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  Container(
-                                    margin: EdgeInsets.only(
-                                      left: isMe ? 64 : 12,
-                                      right: isMe ? 12 : 64,
-                                      top: 2,
-                                      bottom: 2,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                      horizontal: 16,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isMe
-                                          ? const Color(0xFFE53935)
-                                          : const Color(0xFF252540),
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: const Radius.circular(20),
-                                        topRight: const Radius.circular(20),
-                                        bottomLeft: Radius.circular(isMe ? 20 : 4),
-                                        bottomRight: Radius.circular(isMe ? 4 : 20),
+                                    Container(
+                                      constraints: BoxConstraints(
+                                        maxWidth: MediaQuery.of(context).size.width * 0.65,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                        horizontal: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isMe
+                                            ? const Color(0xFFE53935)
+                                            : const Color(0xFF252540),
+                                        borderRadius: BorderRadius.only(
+                                          topLeft: const Radius.circular(20),
+                                          topRight: const Radius.circular(20),
+                                          bottomLeft: Radius.circular(isMe ? 20 : 4),
+                                          bottomRight: Radius.circular(isMe ? 4 : 20),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        message.text,
+                                        style: const TextStyle(color: Colors.white, fontSize: 15),
                                       ),
                                     ),
-                                    child: Text(
-                                      message.text,
-                                      style: const TextStyle(color: Colors.white, fontSize: 15),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                ]
                               ),
                             );
                           },
